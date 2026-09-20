@@ -4,7 +4,7 @@
 
 AI//CONFIG is an AI hardware assessment and recommendation application. A guided assessment suggests a Cloud, Hybrid, or Local approach, then creates a hardware plan for human review before releasing a detailed report.
 
-[Live application](https://ai-config-advisor.teddyineden.chatgpt.site) · [中文说明](#中文说明) · [Development](#local-development) · [Deployment](GITHUB-DEPLOYMENT.md) · [Contributing](CONTRIBUTING.md)
+[中文说明](#中文说明) · [Development](#local-development) · [Deployment](GITHUB-DEPLOYMENT.md) · [Contributing](CONTRIBUTING.md)
 
 ## Features
 
@@ -18,6 +18,8 @@ AI//CONFIG is an AI hardware assessment and recommendation application. A guided
 - Dark interface with responsive assessment and dashboard layouts.
 
 ## Project status
+
+Maintained by [TeddyAIGo](https://github.com/TeddyAIGo) (ChatGPT: `@teddyaigo`). The hosted demo address is being updated; a verified link will be added once the hosting change is complete.
 
 This is an early-stage project. The live application currently runs on Sites with Cloudflare Workers and D1. GitHub Actions checks types, recommendation rules, and the production build; it does **not** deploy the application.
 
