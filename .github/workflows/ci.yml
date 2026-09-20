@@ -1,0 +1,23 @@
+name: Validate AI CONFIG
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm run install:ci
+      - run: npx tsc --noEmit
+      - run: node tests/engine.mjs
+      - run: npm run build

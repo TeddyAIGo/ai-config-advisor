@@ -1,0 +1,10 @@
+import ts from 'typescript';import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const modules={};function load(p){if(modules[p])return modules[p];const source=fs.readFileSync(p,'utf8');const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};vm.runInNewContext(js,{exports,require:(name)=>load('lib/'+name.replace('./','')+'.ts'),Intl,Set,Math,Object,Number,JSON,Error});modules[p]=exports;return exports;}
+const {recommend,validateRevision}=load('lib/engine.ts');const {validateAnswers}=load('lib/assessment.ts');const base={persona:'Just me',workloads:['Private ChatGPT'],users:'1',privacy:'Not really',data:'Less than 100GB',automation:'No',hardware:['Windows PC'],budget:'Under $500',technical:'I just want it to work'};
+assert.equal(recommend(base).architecture,'Cloud');assert.equal(recommend(base).minVram,0);assert.match(recommend(base).explanation,/don’t need a local AI server/);
+const local=recommend({...base,privacy:'Absolutely'});assert.equal(local.architecture,'Local');assert.ok(local.minVram>=16);assert.match(local.estimatedBudget,/exceeds your budget/);
+const hybrid=recommend({...base,privacy:'Some of it'});assert.equal(hybrid.architecture,'Hybrid');
+const team={...base,users:'6–10',privacy:'Absolutely',workloads:['Company Knowledge AI / RAG'],budget:'$5,000–10,000'};const small=recommend(team),large=recommend({...team,users:'30+'});assert.ok(large.minVram>small.minVram);
+const heavy=recommend({...base,privacy:'Absolutely',workloads:['Video Generation','Fine-tuning / Training']});assert.ok(heavy.minVram>=48);assert.match(heavy.explanation,/specialist benchmark/);
+assert.throws(()=>validateRevision({...local,minVram:1},local,{...base,privacy:'Absolutely'}));assert.throws(()=>validateRevision({...local,architecture:'Cloud'},local,{...base,privacy:'Absolutely'}));
+assert.throws(()=>validateAnswers({...base,hardware:['Mac','Nothing yet']}));console.log('PASS: cloud/local/hybrid, budget conflicts, concurrency scaling, heavy workloads, privacy constraints, numeric safety floors, exclusive options');
