@@ -1,54 +1,126 @@
 # AI//CONFIG
 
-A Cloudflare Worker application with a persistent D1 database, passwordless email accounts, deterministic hardware planning, and a separate administrator review workflow.
+**Plan an AI setup around your workload, privacy needs, budget, and existing hardware.**
 
-## Running locally
+AI//CONFIG is an AI hardware assessment and recommendation application. A guided assessment suggests a Cloud, Hybrid, or Local approach, then creates a hardware plan for human review before releasing a detailed report.
 
-Use the installed Sites workflow to install dependencies and run `npm run dev`. The portable preview runs on localhost:5173. Generate schema migrations with `npm run db:generate`; build with the Sites build helper, then apply pending migrations using Wrangler's local D1 command and `.wrangler/state` (see the generated `dist/server/wrangler.json`). Never replay applied migrations or edit production migration history.
+[Live application](https://ai-config-advisor.teddyineden.chatgpt.site) · [中文说明](#中文说明) · [Development](#local-development) · [Deployment](GITHUB-DEPLOYMENT.md) · [Contributing](CONTRIBUTING.md)
 
-Local sign-in is supplied by the Sites starter, only on loopback development requests, as `seedy@sites.test`. To test admin views, include this address in your local, ignored `.env` ADMIN_EMAILS value. Never include the local test address in hosted settings. Production sign-in is provided by Sites and administrator access additionally requires the configured email allowlist.
+## Features
 
-## Runtime settings
+- Guided nine-step assessment covering use cases, privacy, concurrent users, data, automation, existing devices, budget, and experience.
+- Deterministic hardware sizing with explicit assumptions for model weights, context, memory, storage, and concurrency.
+- Cloud-only recommendations when buying new hardware is unnecessary.
+- Passwordless email verification, account creation, and a personal report dashboard.
+- Administrator review queue with editable drafts, revision history, approval, and report delivery.
+- Product catalog with country, availability, capacity, and compatibility checks.
+- Optional AI-generated explanations; the core recommendation engine works without an OpenAI key.
+- Dark interface with responsive assessment and dashboard layouts.
 
-Configure secrets through the Sites environment settings, never through the frontend or hosting manifest.
+## Project status
 
-- `ADMIN_EMAILS`: comma-separated administrator email allowlist. Production is restricted to the owner-provided address.
-- `RESEND_API_KEY` and `EMAIL_FROM`: Resend API key and verified sender address. Without both, messages are stored in the database as **administrator-only previews**. No email is delivered and no report is marked sent. Use test addresses when testing this mode.
-- `OPENAI_API_KEY`: optional server-side explanation service key.
-- `OPENAI_MODEL`: optional Responses-compatible model, default `gpt-4.1-mini`. Check account availability when enabling it.
+This is an early-stage project. The live application currently runs on Sites with Cloudflare Workers and D1. GitHub Actions checks types, recommendation rules, and the production build; it does **not** deploy the application.
 
-The optional OpenAI integration uses [Responses](https://developers.openai.com/api/reference/cli/resources/responses/methods/create), `store: false`, and sends only the categorical plan, excluding identity and free-text device details. Strict-privacy assessments never call the external explanation service. An unavailable service falls back to the deterministic explanation. Live provider calls have not been tested without credentials.
+Independent Cloudflare hosting is still being prepared. Administrator authentication currently depends on Sites-provided identity. Do not deploy this version directly as an independent public Worker without replacing that integration. See the [deployment guide](GITHUB-DEPLOYMENT.md).
 
-## Workflow
+Email delivery requires a configured provider and verified sender. Without them, the application stores administrator-only email previews and does not send messages. The product catalog starts empty. Hardware estimates are planning ranges, not benchmarks or live price quotes.
 
-1. An anonymous assessment receives an unguessable HttpOnly ownership cookie; every answer is validated server-side before persistence.
-2. Name, email, and ISO country are attached to that assessment. An expiring six-digit challenge is stored as a hash, with persistent request and attempt limits.
-3. Verification creates or reuses an email account, attaches the assessment, and issues an expiring, opaque HttpOnly session; only its hash is stored.
-4. Deterministic planning and an optional explanation produce a review draft. User endpoints never return the draft.
-5. The authorized admin reviews all answers, edits the draft, adds compatibility-checked products, and approves. Each edit retains a revision and review record; stale revisions are rejected.
-6. Approve & Send renders an escaped HTML report. Successful provider delivery records Report Sent; missing provider configuration records Report Preview Ready. Approved reports appear in the owner's dashboard.
-7. Saving a draft, rejection, or regeneration removes the released recommendation until it is approved again.
+## How it works
 
-## Hardware rules and limits
+1. Complete the assessment and receive a preliminary architecture recommendation.
+2. Verify your email to save the assessment and create an account.
+3. An administrator reviews the plan and any matching products.
+4. The approved report becomes available in your dashboard and can be sent by email when delivery is configured.
 
-Rules use workload, privacy, concurrency, context, 4-bit model-weight assumptions, illustrative KV-cache geometry, runtime overhead, image/video/training flags, automation, data storage, budget, technical ability, and existing-device reuse. They provide **planning ranges, not measured performance or live retail quotes**. Video/training plans explicitly require model-specific discovery. Large private datasets require separate storage and backup planning.
+## Technology
 
-Strict privacy cannot be changed to cloud to force a lower price. Edits cannot lower the numeric safety floors, and GPU/RAM/storage text must remain consistent with those floors. Admins must validate model-specific behavior, runtime support, PSU/cooling, interfaces, power requirements, and local pricing before approving purchasing advice. Unknown device specifications never prove compatibility.
+| Layer | Stack |
+| --- | --- |
+| Interface | React, TypeScript, Tailwind CSS, shadcn components |
+| Application | Vinext, Vite, Next.js App Router conventions |
+| Runtime | Cloudflare Workers |
+| Database | Cloudflare D1, Drizzle ORM |
+| Email | Resend, with a local preview mode |
+| Optional explanations | OpenAI Responses API |
+| Validation | GitHub Actions, TypeScript, engine and workflow checks |
 
-References: [Hugging Face quantization](https://huggingface.co/docs/transformers/quantization/bitsandbytes) and [vLLM cache sizing](https://docs.vllm.ai/en/latest/api/vllm/config/cache/).
+## Local development
 
-## Product catalog
+Requires **Node.js 22.13 or later** and npm. A clean clone uses the portable development profile; installing the Sites plugin is not required for this path.
 
-The catalog deliberately starts empty: no invented availability, prices, or purchase links. Admins can add RAM, SSDs, NAS storage, GPUs, mini PCs, workstations, and networking from any brand. Capacity uses GB for RAM/VRAM and TB for storage. Matches require a customer country match, in-stock status, applicable minimum capacity, and an explicit compatibility rationale. Cloud-only recommendations reject hardware matches. Retail prices are stored in minor currency units.
+```sh
+git clone https://github.com/TeddyAIGo/ai-config-advisor.git
+cd ai-config-advisor
+npm run install:ci
+cp .env.example .env
+```
 
-Funnel events cover visits through report delivery and product clicks. Purchase is reserved for a future trusted integration; there is no payment or checkout functionality.
+For local administrator access, set this value in your ignored `.env` file:
 
-## Verification
+```dotenv
+ADMIN_EMAILS=seedy@sites.test
+```
 
-- `node tests/engine.mjs`: cloud/local/hybrid, budget conflicts, concurrency, specialized workloads, safety floors, and exclusive answer validation.
-- `node tests/workflow.mjs`: localhost-only end-to-end account/review/report-preview flow, authorization and ownership rejection, OTP replay, revision conflicts, product matching and inventory filtering.
-- `npx tsc --noEmit`: type checking.
-- Browser QA: all nine questions, country search, email verification, admin approval, released dashboard report, and 390px mobile assessment controls.
-- WebMCP: stage-assessment-answer valid input read back in UI; invalid input rejected.
+Leave email provider keys empty to use preview mode. The loopback development server supplies the local test identity; it is not a production administrator account.
 
-Test data stays in the local preview database. Production migrations contain schema only. The Site is initially owner-private; public access and real email delivery require explicit launch configuration.
+Build once to generate the local Worker configuration, initialize a **new** local database, then start development:
+
+```sh
+npm run build
+npx wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_magical_sentinel.sql
+npm run dev
+```
+
+Open `http://localhost:5173`; administrator tools are at `/admin`. Apply the initial SQL file only once to a new local database. Existing databases require applying only unapplied migrations. Keep `.env` and `.wrangler/` out of version control.
+
+See [runtime settings and architecture](docs/architecture.md) for environment variables, account handling, review behavior, and hardware sizing assumptions.
+
+## Validation
+
+```sh
+npx tsc --noEmit
+node tests/engine.mjs
+npm run build
+```
+
+With the local development server running, the test administrator enabled, and email keys empty:
+
+```sh
+node tests/workflow.mjs
+```
+
+The workflow check creates synthetic assessments and catalog records in your local database. It covers account ownership, OTP replay rejection, administrator permissions, revision conflicts, approval, and report previews.
+
+## Repository layout
+
+```text
+app/                 Pages, assessment UI, dashboards, and API routes
+lib/                 Assessment definitions, recommendation engine, server helpers
+db/                  Database access and schema
+drizzle/             Schema migrations
+components/          Shared interface components
+tests/               Recommendation and local workflow checks
+docs/                Architecture and runtime documentation
+.github/workflows/   Continuous integration
+```
+
+## Roadmap
+
+- Independent Cloudflare deployment with portable administrator authentication.
+- Verified production email delivery.
+- Model-specific hardware benchmarks and broader compatibility data.
+- Community feedback on assessment questions, accessibility, and recommendation rules.
+
+## Contributing
+
+Bug reports, documentation improvements, and tested recommendation-rule changes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Please use synthetic data in reports and examples.
+
+## License
+
+[MIT](LICENSE) © 2026 TeddyAIGo. Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## 中文说明
+
+AI//CONFIG 根据使用场景、隐私要求、预算和现有设备，提供云端、混合或本地 AI 部署建议。用户完成评估后，由管理员审核详细方案，再向用户发布报告。
+
+项目采用 MIT 许可证，欢迎提交问题、文档改进和代码贡献。当前线上版本由 Sites 托管，独立 Cloudflare 部署仍在准备中；邮件服务未配置时仅生成管理员可见的预览，不会实际发信。硬件建议是规划参考，不代表实测性能或实时商品报价。

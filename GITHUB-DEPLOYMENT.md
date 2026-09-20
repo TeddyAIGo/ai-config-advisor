@@ -1,6 +1,6 @@
 # GitHub 管理与正式发布
 
-代码可以放入私有 GitHub 仓库。附带的 GitHub Actions 工作流负责类型检查、推荐规则测试和构建；它不发布应用，也不需要生产密钥。
+本项目以 MIT 许可证在公开 GitHub 仓库维护。附带的 GitHub Actions 工作流负责类型检查、推荐规则测试和构建；它不发布应用，也不需要生产密钥。
 
 ## 推荐的发布方式
 
@@ -10,7 +10,7 @@ GitHub Pages 只提供静态托管，不能单独运行本项目的 API、验证
 
 目前线上版本由 Sites 托管。迁移到你自己的 Cloudflare 账户前，必须完成：
 
-1. 确定仓库、Cloudflare 账户和域名。
+1. 确定仓库和 Cloudflare 账户。初期可使用 workers.dev 地址，自有域名可后续绑定。
 2. 在新账户创建 D1 数据库，绑定 DB，并按顺序应用 drizzle 迁移；有生产数据时另行迁移数据，不能仅复制 schema。
 3. 把生成配置里的本地占位数据库 ID 替换成新账户的真实资源，并配置正式 Worker 名称、构建和发布流程。
 4. 将管理员认证改为邮件登录或独立的受信身份系统。当前 Sites 版本依赖平台提供的身份头；在普通公网 Worker 上不得直接信任客户端传入的 oai-authenticated-user-* 请求头。Sites 的 /signin-with-chatgpt 路由不能直接移植。
